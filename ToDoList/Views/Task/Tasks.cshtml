@@ -1,0 +1,28 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="jumbotron">
+            <h1>Current Tasks</h1>
+        </div>
+        <a href="/form" type="button" class="btn btn-primary">Add New Task</a>
+        <a href="/" type="button" class="btn btn-primary">Return to Home</a>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <h3>Current Tasks:</h3>
+        @{
+            foreach (var task in Model)
+            {
+                <p>Task: @task.GetDescription()</p>
+                <p>Task No. @task.GetId()</p>
+                <a href="/items/@task.GetId()/update" type="button" class="btn btn-primary">Edit</a>
+                <a href="/items/@task.GetId()/delete" type="button" class="btn btn-danger">Delete</a>
+                <hr />
+            }
+        }
+    </div>
+</div>

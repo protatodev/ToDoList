@@ -1,70 +1,219 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using MySql.Data.MySqlClient;
+using ToDoList;
+using System;
 
-namespace ToDoList
+namespace ToDoList.Models
 {
     public class ListMaker
     {
-        List<string> taskList = new List<string>() { };
+        private int id = 0;
+        private string description = "";
+        private int categoryId;
 
-        public void DisplayMenu()
+        public ListMaker(string Description, int categoryId, int Id =0)
         {
-            Console.WriteLine("***Welcome to the To Do List tracker! ***");
-            Console.WriteLine("Choose one of the following options: (Add/View/Quit)");
-            string choice = Console.ReadLine();
+            id = Id;
+            this.categoryId = categoryId;
+            description = Description;
+        }
 
-            if (choice.ToLower() == "add")
+        public override int GetHashCode()
+        {
+            return this.GetDescription().GetHashCode();
+        }
+
+        public string GetDescription()
+        {
+            return description;
+        }
+
+        public int GetId()
+        {
+            return id;
+        }
+
+        public int GetCategoryId()
+        {
+            return categoryId;
+        }
+
+        public void Edit(string newDescription)
+        {
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
+
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"UPDATE items SET description = @newDescription WHERE id = @searchId;";
+
+            MySqlParameter searchId = new MySqlParameter();
+            searchId.ParameterName = "@searchId";
+            searchId.Value = id;
+            cmd.Parameters.Add(searchId);
+
+            MySqlParameter description = new MySqlParameter();
+            description.ParameterName = "@newDescription";
+            description.Value = newDescription;
+            cmd.Parameters.Add(description);
+
+            cmd.ExecuteNonQuery();
+            this.description = newDescription;
+
+            conn.Close();
+            if(conn != null)
             {
-                AddTask();
+                conn.Dispose();
             }
-            else if (choice.ToLower() == "view")
+        }
+
+        public void Delete()
+        {
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
+
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"DELETE FROM items WHERE id = @searchId;";
+
+            MySqlParameter searchId = new MySqlParameter();
+            searchId.ParameterName = "@searchId";
+            searchId.Value = id;
+            cmd.Parameters.Add(searchId);
+
+            cmd.ExecuteNonQuery();
+
+            conn.Close();
+            if (conn != null)
             {
-                ViewTasks();
+                conn.Dispose();
             }
-            else if (choice.ToLower() == "quit")
+        }
+
+        public static List<ListMaker> GetAll()
+        {
+            List<ListMaker> allItems = new List<ListMaker> { };
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
+            MySqlCommand cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"SELECT * FROM items;";
+            MySqlDataReader rdr = cmd.ExecuteReader() as MySqlDataReader;
+
+            while(rdr.Read())
             {
-                Environment.Exit(0);
+                int itemId = rdr.GetInt32(0);
+                string itemDescription = rdr.GetString(1);
+                int itemCategoryId = rdr.GetInt32(2);
+                ListMaker newItem = new ListMaker(itemDescription, itemCategoryId, itemId);
+                allItems.Add(newItem);
+            }
+
+            conn.Close();
+
+            if (conn != null)
+            {
+                conn.Dispose();
+            }
+
+            return allItems;
+        }
+
+        public static void DeleteAll()
+        {
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
+
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"DELETE FROM items;";
+
+            cmd.ExecuteNonQuery();
+
+            conn.Close();
+            if(conn != null)
+            {
+                conn.Dispose();
+            }
+        }
+
+        public override bool Equals(System.Object otherItem)
+        {
+            if (!(otherItem is ListMaker))
+            {
+                return false;
             }
             else
             {
-                Console.WriteLine("Invalid option!");
-                DisplayMenu();
+                ListMaker newItem = (ListMaker) otherItem;
+                bool idEquality = (this.GetId() == newItem.GetId());
+                bool descriptionEquality = (this.GetDescription() == newItem.GetDescription());
+                bool categoryEquality = this.GetCategoryId() == newItem.GetCategoryId();
+
+                return (idEquality && descriptionEquality && categoryEquality);
             }
         }
 
-        public void AddTask()
+        public void Save()
         {
-            Console.WriteLine("Enter a description for your new task");
-            string task = Console.ReadLine();
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
 
-            taskList.Add(task);
-            Console.WriteLine("Successfully added task.");
-            DisplayMenu();
-        }
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"INSERT INTO items (description, category_id) VALUES (@description, @category_id);";
 
-        public void ViewTasks()
-        {
-            if (taskList.Count == 0)
+            MySqlParameter description = new MySqlParameter();
+            description.ParameterName = "@description";
+            description.Value = this.description;
+            cmd.Parameters.Add(description);
+
+            MySqlParameter categoryId = new MySqlParameter();
+            categoryId.ParameterName = "@category_id";
+            categoryId.Value = this.categoryId;
+            cmd.Parameters.Add(categoryId);
+
+
+            cmd.ExecuteNonQuery();
+            id = (int) cmd.LastInsertedId;
+
+            conn.Close();
+            if(conn != null)
             {
-                Console.WriteLine("You don't have any tasks!");
-            } else {
-                Console.WriteLine("*** Your Current Tasks ***");
-                for (int i = 0; i < taskList.Count; i++)
-                {
-                    Console.WriteLine("Task " + i + ": " + taskList[i]);
-                }
+                conn.Dispose();
+            }
+        }
+
+        public static ListMaker Find(int id)
+        {
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
+
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"SELECT * FROM `items` WHERE id = @thisId;";
+
+            MySqlParameter thisId = new MySqlParameter();
+            thisId.ParameterName = "@thisId";
+            thisId.Value = id;
+            cmd.Parameters.Add(thisId);
+
+            var rdr = cmd.ExecuteReader() as MySqlDataReader;
+
+            int itemId = 0;
+            string itemDescription = "";
+            int itemCategoryId = 0;
+
+            while(rdr.Read())
+            {
+                itemId = rdr.GetInt32(0);
+                itemDescription = rdr.GetString(1);
+                itemCategoryId = rdr.GetInt32(2);
             }
 
-            DisplayMenu();
-        }
-    }
+            ListMaker foundItem = new ListMaker(itemDescription, itemCategoryId, itemId);
 
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            ListMaker list = new ListMaker();
-            list.DisplayMenu();
+            conn.Close();
+            if(conn != null)
+            {
+                conn.Dispose();
+            }
+
+            return foundItem;
         }
     }
 }
