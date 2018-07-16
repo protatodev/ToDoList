@@ -43,6 +43,23 @@ namespace ToDoList.Models
             return _id;
         }
 
+        public static void DeleteAll()
+        {
+            MySqlConnection conn = DB.Connection();
+            conn.Open();
+
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"DELETE FROM categories;";
+
+            cmd.ExecuteNonQuery();
+
+            conn.Close();
+            if (conn != null)
+            {
+                conn.Dispose();
+            }
+        }
+
         public void AddItem(ListMaker newItem)
         {
             MySqlConnection conn = DB.Connection();
@@ -72,44 +89,26 @@ namespace ToDoList.Models
         {
             MySqlConnection conn = DB.Connection();
             conn.Open();
-            var cmd = conn.CreateCommand() as MySqlCommand;
-            cmd.CommandText = @"SELECT item_id FROM categories_items WHERE category_id = @CategoryId;";
+            MySqlCommand cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = @"SELECT items.* FROM categories
+                JOIN categories_items ON (categories.id = categories_items.category_id)
+                JOIN items ON (categories_items.item_id = items.id)
+                WHERE categories.id = @CategoryId;";
 
             MySqlParameter categoryIdParameter = new MySqlParameter();
             categoryIdParameter.ParameterName = "@CategoryId";
             categoryIdParameter.Value = _id;
             cmd.Parameters.Add(categoryIdParameter);
 
-            var rdr = cmd.ExecuteReader() as MySqlDataReader;
+            MySqlDataReader rdr = cmd.ExecuteReader() as MySqlDataReader;
+            List<ListMaker> items = new List<ListMaker> { };
 
-            List<int> itemIds = new List<int> { };
             while (rdr.Read())
             {
                 int itemId = rdr.GetInt32(0);
-                itemIds.Add(itemId);
-            }
-            rdr.Dispose();
-
-            List<ListMaker> items = new List<ListMaker> { };
-            foreach (int itemId in itemIds)
-            {
-                var itemQuery = conn.CreateCommand() as MySqlCommand;
-                itemQuery.CommandText = @"SELECT * FROM items WHERE id = @ItemId;";
-
-                MySqlParameter itemIdParameter = new MySqlParameter();
-                itemIdParameter.ParameterName = "@ItemId";
-                itemIdParameter.Value = itemId;
-                itemQuery.Parameters.Add(itemIdParameter);
-
-                var itemQueryRdr = itemQuery.ExecuteReader() as MySqlDataReader;
-                while (itemQueryRdr.Read())
-                {
-                    int thisItemId = itemQueryRdr.GetInt32(0);
-                    string itemDescription = itemQueryRdr.GetString(1);
-                    ListMaker foundItem = new ListMaker(itemDescription, thisItemId);
-                    items.Add(foundItem);
-                }
-                itemQueryRdr.Dispose();
+                string itemDescription = rdr.GetString(1);
+                ListMaker newItem = new ListMaker(itemDescription, itemId);
+                items.Add(newItem);
             }
             conn.Close();
             if (conn != null)
@@ -201,8 +200,9 @@ namespace ToDoList.Models
         {
             MySqlConnection conn = DB.Connection();
             conn.Open();
+            var cmd = conn.CreateCommand() as MySqlCommand;
+            cmd.CommandText = "DELETE FROM categories WHERE id = @CategoryId; DELETE FROM categories_items WHERE category_id = @CategoryId;";
 
-            MySqlCommand cmd = new MySqlCommand("DELETE FROM categories WHERE id = @CategoryId; DELETE FROM categories_items WHERE category_id = @CategoryId;", conn);
             MySqlParameter categoryIdParameter = new MySqlParameter();
             categoryIdParameter.ParameterName = "@CategoryId";
             categoryIdParameter.Value = this.GetId();
@@ -214,37 +214,6 @@ namespace ToDoList.Models
             {
                 conn.Close();
             }
-        }
-
-        public List<ListMaker> GetItems()
-        {
-            List<ListMaker> allCategoryItems = new List<ListMaker> { };
-            MySqlConnection conn = DB.Connection();
-            conn.Open();
-            var cmd = conn.CreateCommand() as MySqlCommand;
-            cmd.CommandText = @"SELECT * FROM items WHERE category_id = @category_id;";
-
-            MySqlParameter categoryId = new MySqlParameter();
-            categoryId.ParameterName = "@category_id";
-            categoryId.Value = this._id;
-            cmd.Parameters.Add(categoryId);
-
-
-            var rdr = cmd.ExecuteReader() as MySqlDataReader;
-            while (rdr.Read())
-            {
-                int itemId = rdr.GetInt32(0);
-                string itemDescription = rdr.GetString(1);
-                int itemCategoryId = rdr.GetInt32(2);
-                ListMaker newItem = new ListMaker(itemDescription, itemId);
-                allCategoryItems.Add(newItem);
-            }
-            conn.Close();
-            if (conn != null)
-            {
-                conn.Dispose();
-            }
-            return allCategoryItems;
         }
     }
 }
