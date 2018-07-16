@@ -12,7 +12,7 @@ namespace ToDoList.Tests
         public void Dispose()
         {
             ListMaker.DeleteAll();
-           // Category.DeleteAll();
+            Category.DeleteAll();
         }
 
         public ListMakerTest()
@@ -35,8 +35,8 @@ namespace ToDoList.Tests
         public void Equals_ReturnsTrueIfDescriptionsAreTheSame_Item()
         {
             // Arrange, Act
-            ListMaker firstItem = new ListMaker("Mow the lawn", 1);
-            ListMaker secondItem = new ListMaker("Mow the lawn", 1);
+            ListMaker firstItem = new ListMaker("Mow the lawn");
+            ListMaker secondItem = new ListMaker("Mow the lawn");
 
             // Assert
             Assert.AreEqual(firstItem, secondItem);
@@ -46,7 +46,7 @@ namespace ToDoList.Tests
         public void Save_SavesToDatabase_ItemList()
         {
             //Arrange
-            ListMaker testItem = new ListMaker("Mow the lawn", 1);
+            ListMaker testItem = new ListMaker("Mow the lawn");
 
             //Act
             testItem.Save();
@@ -61,7 +61,7 @@ namespace ToDoList.Tests
         public void Save_AssignsIdToObject_Id()
         {
             //Arrange
-            ListMaker testItem = new ListMaker("Mow the lawn", 1);
+            ListMaker testItem = new ListMaker("Mow the lawn");
 
             //Act
             testItem.Save();
@@ -78,7 +78,7 @@ namespace ToDoList.Tests
         public void Find_FindsItemInDatabase_Item()
         {
             //Arrange
-            ListMaker testItem = new ListMaker("Mow the lawn", 1);
+            ListMaker testItem = new ListMaker("Mow the lawn");
             testItem.Save();
 
             //Act
@@ -93,7 +93,7 @@ namespace ToDoList.Tests
         {
             //Arrange
             string firstDescription = "Walk the Dog";
-            ListMaker testItem = new ListMaker(firstDescription, 1);
+            ListMaker testItem = new ListMaker(firstDescription);
             testItem.Save();
             string secondDescription = "Mow the lawn";
 
@@ -104,6 +104,70 @@ namespace ToDoList.Tests
 
             //Assert
             Assert.AreEqual(secondDescription, result);
+        }
+
+        [TestMethod]
+        public void AddCategory_AddsCategoryToItem_CategoryList()
+        {
+            //Arrange
+            ListMaker testItem = new ListMaker("Mow the lawn");
+            testItem.Save();
+
+            Category testCategory = new Category("Home stuff");
+            testCategory.Save();
+
+            //Act
+            testItem.AddCategory(testCategory);
+
+            List<Category> result = testItem.GetCategories();
+            List<Category> testList = new List<Category> { testCategory };
+
+            //Assert
+            CollectionAssert.AreEqual(testList, result);
+        }
+
+        [TestMethod]
+        public void GetCategories_ReturnsAllItemCategories_CategoryList()
+        {
+            //Arrange
+            ListMaker testItem = new ListMaker("Mow the lawn");
+            testItem.Save();
+
+            Category testCategory1 = new Category("Home stuff");
+            testCategory1.Save();
+
+            Category testCategory2 = new Category("Work stuff");
+            testCategory2.Save();
+
+            //Act
+            testItem.AddCategory(testCategory1);
+            List<Category> result = testItem.GetCategories();
+            List<Category> testList = new List<Category> { testCategory1 };
+
+            //Assert
+            CollectionAssert.AreEqual(testList, result);
+        }
+
+        [TestMethod]
+        public void Delete_DeletesItemAssociationsFromDatabase_ItemList()
+        {
+            //Arrange
+            Category testCategory = new Category("Home stuff");
+            testCategory.Save();
+
+            string testDescription = "Mow the lawn";
+            ListMaker testItem = new ListMaker(testDescription);
+            testItem.Save();
+
+            //Act
+            testItem.AddCategory(testCategory);
+            testItem.Delete();
+
+            List<ListMaker> resultCategoryItems = testCategory.GetItems();
+            List<ListMaker> testCategoryItems = new List<ListMaker> { };
+
+            //Assert
+            CollectionAssert.AreEqual(testCategoryItems, resultCategoryItems);
         }
     }
 }

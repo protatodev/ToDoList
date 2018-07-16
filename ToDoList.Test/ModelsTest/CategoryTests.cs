@@ -8,20 +8,95 @@ namespace ToDoList.Tests
     [TestClass]
     public class CategoryTests : IDisposable
     {
-        public CategoryTests()
+        public void Dispose()
         {
-            DBConfiguration.ConnectionString = "server=localhost;user id=root;password=root;port=3306;database=todo_test;";
+            ListMaker.DeleteAll();
+            Category.DeleteAll();
         }
 
+        public CategoryTests()
+        {
+            DBConfiguration.ConnectionString = "server=localhost;user id=root;password=root;port=8889;database=todo_test;";
+        }
+
+        [TestMethod]
+        public void Delete_DeletesCategoryAssociationsFromDatabase_CategoryList()
+        {
+            //Arrange
+            ListMaker testItem = new ListMaker("Mow the lawn");
+            testItem.Save();
+
+            string testName = "Home stuff";
+            Category testCategory = new Category(testName);
+            testCategory.Save();
+
+            //Act
+            testCategory.AddItem(testItem);
+            testCategory.Delete();
+
+            List<Category> resultItemCategories = testItem.GetCategories();
+            List<Category> testItemCategories = new List<Category> { };
+
+            //Assert
+            CollectionAssert.AreEqual(testItemCategories, resultItemCategories);
+        }
+
+        [TestMethod]
+        public void Test_AddItem_AddsItemToCategory()
+        {
+            //Arrange
+            Category testCategory = new Category("Household chores");
+            testCategory.Save();
+
+            ListMaker testItem = new ListMaker("Mow the lawn");
+            testItem.Save();
+
+            ListMaker testItem2 = new ListMaker("Water the garden");
+            testItem2.Save();
+
+            //Act
+            testCategory.AddItem(testItem);
+            testCategory.AddItem(testItem2);
+
+            List<ListMaker> result = testCategory.GetItems();
+            List<ListMaker> testList = new List<ListMaker> { testItem, testItem2 };
+
+            //Assert
+            CollectionAssert.AreEqual(testList, result);
+        }
+
+        [TestMethod]
+        public void GetItems_ReturnsAllCategoryItems_ItemList()
+        {
+            //Arrange
+            Category testCategory = new Category("Household chores");
+            testCategory.Save();
+
+            ListMaker testItem1 = new ListMaker("Mow the lawn");
+            testItem1.Save();
+
+            ListMaker testItem2 = new ListMaker("Buy plane ticket");
+            testItem2.Save();
+
+            //Act
+            testCategory.AddItem(testItem1);
+            List<ListMaker> savedItems = testCategory.GetItems();
+            List<ListMaker> testList = new List<ListMaker> { testItem1 };
+
+            //Assert
+            CollectionAssert.AreEqual(testList, savedItems);
+        }
+
+        /*
         [TestMethod]
         public void GetItems_RetrievesAllItemsWithCategory_ItemList()
         {
             Category testCategory = new Category("Household chores");
             testCategory.Save();
 
-            ListMaker firstItem = new ListMaker("Mow the lawn", testCategory.GetId());
+            ListMaker firstItem = new ListMaker("Mow the lawn");
             firstItem.Save();
-            ListMaker secondItem = new ListMaker("Do the dishes", testCategory.GetId());
+            ListMaker secondItem = new ListMaker("Do the dishes");
             secondItem.Save();
 
 
@@ -30,6 +105,7 @@ namespace ToDoList.Tests
 
             CollectionAssert.AreEqual(testItemList, resultItemList);
         }
+        */
 
         [TestMethod]
         public void GetAll_CategoriesEmptyAtFirst_0()
@@ -98,12 +174,6 @@ namespace ToDoList.Tests
 
             //Assert
             Assert.AreEqual(testCategory, foundCategory);
-        }
-
-        public void Dispose()
-        {
-            ListMaker.DeleteAll();
-            Category.DeleteAll();
         }
     }
 }
